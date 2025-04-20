@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Recordatorio de Pastillas</string>
+    <string name="notification_title">¡Recordatorio de medicamento!</string>
+    <string name="notification_content">Hora de tomar: %1$s a las %2$s</string>
+</resources>

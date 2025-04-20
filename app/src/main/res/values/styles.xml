@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Estilo para los días de la semana (L, M, M, etc.) -->
+    <style name="TextAppearance.App.Weekday" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:textColor">#757575</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <!-- Estilo para los días normales del calendario (1, 2, 3...) -->
+    <style name="TextAppearance.App.Day" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:textColor">#212121</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:fontFamily">sans-serif</item>
+    </style>
+
+</resources>

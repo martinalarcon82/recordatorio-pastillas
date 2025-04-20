@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginVertical="8dp"
+    android:layout_marginHorizontal="4dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="4dp"
+    android:foreground="?attr/selectableItemBackground">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="12dp"
+        android:gravity="center_vertical">
+
+        <!-- Hora a la izquierda (nuevo TextView) -->
+        <TextView
+            android:id="@+id/tvHora"
+            android:layout_width="80dp"
+            android:layout_height="wrap_content"
+            android:text="08:00"
+            android:textColor="@color/teal_700"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:gravity="end"
+            android:paddingEnd="12dp"/>
+
+        <!-- Ícono (conservado) -->
+        <ImageView
+            android:id="@+id/imgIcono"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_pill"
+            android:contentDescription="Ícono medicamento"
+            app:tint="@color/teal_700"
+            android:layout_marginEnd="12dp"/>
+
+        <!-- Contenedor de texto (modificado) -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <!-- Nombre (cambiado a tvNombre) -->
+            <TextView
+                android:id="@+id/tvNombre"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Paracetamol"
+                android:textStyle="bold"
+                android:textColor="#212121"
+                android:textSize="16sp"
+                android:ellipsize="end"
+                android:maxLines="1"/>
+
+            <!-- Descripción (opcional) -->
+            <TextView
+                android:id="@+id/txtDescripcion"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="500mg cada 8 horas"
+                android:textColor="#666666"
+                android:textSize="14sp"
+                android:visibility="gone"/>
+        </LinearLayout>
+
+    </LinearLayout>
+</androidx.cardview.widget.CardView>
