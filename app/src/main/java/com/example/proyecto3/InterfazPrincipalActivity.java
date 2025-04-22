@@ -10,6 +10,7 @@ import android.widget.Button;
 import android.widget.CalendarView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.content.pm.PackageManager;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -32,6 +33,7 @@ import java.util.List;
 
 public class InterfazPrincipalActivity extends AppCompatActivity {
 
+    // Declaración de vistas
     private MaterialToolbar toolbar;
     private TextView tvGreeting;
     private Button btnAddMed;
@@ -39,21 +41,29 @@ public class InterfazPrincipalActivity extends AppCompatActivity {
     private BottomNavigationView bottomNav;
     private CalendarView calendarView;
 
+    // Firebase
     private FirebaseFirestore db;
     private FirebaseAuth mAuth;
 
+    // Adaptador y listas
     private RecordatorioAdapter adapter;
     private List<Medicamento> listaFiltrada;
     private List<Medicamento> todosLosMedicamentos;
 
+    // Para manejar el resultado de la actividad de agregar medicamento
     private ActivityResultLauncher<Intent> agregarMedicamentoLauncher;
+
+    // Fecha seleccionada en el calendario
     private String fechaSeleccionada = "";
+
+    private static final int REQUEST_NOTIFICATION_PERMISSION = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_interfaz_principal);
 
+        // Llamada a métodos de configuración e inicialización
         inicializarComponentes();
         configurarToolbar();
         configurarFirebase();
@@ -63,9 +73,11 @@ public class InterfazPrincipalActivity extends AppCompatActivity {
         configurarBotonAgregar();
         configurarActivityResult();
         cargarMedicamentos();
+        pedirPermisoNotificaciones();
     }
 
     private void inicializarComponentes() {
+        // Vincular vistas del layout con variables
         toolbar       = findViewById(R.id.toolbar);
         tvGreeting    = findViewById(R.id.tvGreeting);
         btnAddMed     = findViewById(R.id.btnAddMed);
@@ -75,6 +87,7 @@ public class InterfazPrincipalActivity extends AppCompatActivity {
     }
 
     private void configurarToolbar() {
+        // Configura la toolbar y el listener del ícono de navegación
         setSupportActionBar(toolbar);
         toolbar.setNavigationOnClickListener(v -> mostrarDialogoCerrarSesion());
         toolbar.setOnMenuItemClickListener(item -> {
@@ -87,6 +100,7 @@ public class InterfazPrincipalActivity extends AppCompatActivity {
     }
 
     private void configurarFirebase() {
+        // Inicializa Firebase y muestra el saludo con el correo del usuario
         mAuth = FirebaseAuth.getInstance();
         db    = FirebaseFirestore.getInstance();
         String email = mAuth.getCurrentUser() != null
@@ -96,6 +110,7 @@ public class InterfazPrincipalActivity extends AppCompatActivity {
     }
 
     private void configurarRecyclerView() {
+        // Inicializa listas y adaptador del RecyclerView
         listaFiltrada      = new ArrayList<>();
         todosLosMedicamentos = new ArrayList<>();
         adapter            = new RecordatorioAdapter(listaFiltrada, this::mostrarDialogoMedicamento);
@@ -104,16 +119,15 @@ public class InterfazPrincipalActivity extends AppCompatActivity {
     }
 
     private void configurarCalendarView() {
-        // Inicialmente vacía, se llena al seleccionar fecha
+        // Listener para cuando el usuario selecciona una fecha del calendario
         calendarView.setOnDateChangeListener((view, year, month, dayOfMonth) -> {
-            // month viene de 0..11, ajustamos +1
-            fechaSeleccionada = String.format("%02d/%02d/%04d",
-                    dayOfMonth, month + 1, year);
+            fechaSeleccionada = String.format("%02d/%02d/%04d", dayOfMonth, month + 1, year);
             filtrarPorFecha(fechaSeleccionada);
         });
     }
 
     private void configurarBottomNavigation() {
+        // Configura navegación inferior
         bottomNav.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
             if (id == R.id.nav_home) {
@@ -131,10 +145,12 @@ public class InterfazPrincipalActivity extends AppCompatActivity {
     }
 
     private void configurarBotonAgregar() {
+        // Listener del botón para añadir medicamento
         btnAddMed.setOnClickListener(v -> lanzarAgregarMedicamento());
     }
 
     private void configurarActivityResult() {
+        // Permite recibir el resultado de AgregarMedicamentoActivity
         agregarMedicamentoLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
@@ -147,11 +163,13 @@ public class InterfazPrincipalActivity extends AppCompatActivity {
     }
 
     private void lanzarAgregarMedicamento() {
+        // Abre la actividad para agregar medicamentos
         Intent intent = new Intent(this, AgregarMedicamentoActivity.class);
         agregarMedicamentoLauncher.launch(intent);
     }
 
     private void cargarMedicamentos() {
+        // Carga medicamentos desde Firestore
         String uid = mAuth.getUid();
         if (uid == null) return;
 
@@ -165,7 +183,7 @@ public class InterfazPrincipalActivity extends AppCompatActivity {
                         Medicamento med = doc.toObject(Medicamento.class);
                         med.setId(doc.getId());
                         todosLosMedicamentos.add(med);
-                        programarRecordatorio(med);
+                        programarRecordatorio(med); // Programa alarma si es futuro
                     }
                     filtrarPorFecha(fechaSeleccionada);
                 })
@@ -175,6 +193,7 @@ public class InterfazPrincipalActivity extends AppCompatActivity {
     }
 
     private void filtrarPorFecha(String fecha) {
+        // Filtra los medicamentos según la fecha seleccionada
         listaFiltrada.clear();
         for (Medicamento m : todosLosMedicamentos) {
             if (fecha.isEmpty() || m.getFecha().equals(fecha)) {
@@ -186,35 +205,57 @@ public class InterfazPrincipalActivity extends AppCompatActivity {
 
     private void programarRecordatorio(Medicamento medicamento) {
         try {
-            String[] hm = medicamento.getHora().split(":");
-            int hora   = Integer.parseInt(hm[0]);
-            int minuto = Integer.parseInt(hm[1]);
+            // Parsear fecha y hora del medicamento
+            String[] partesFecha = medicamento.getFecha().split("/");
+            int day = Integer.parseInt(partesFecha[0]);
+            int month = Integer.parseInt(partesFecha[1]) - 1;
+            int year = Integer.parseInt(partesFecha[2]);
 
+            String[] partesHora = medicamento.getHora().split(":");
+            int hora = Integer.parseInt(partesHora[0]);
+            int minuto = Integer.parseInt(partesHora[1]);
+
+            // Crear objeto Calendar con la fecha y hora
             Calendar calendar = Calendar.getInstance();
-            calendar.set(Calendar.HOUR_OF_DAY, hora);
-            calendar.set(Calendar.MINUTE, minuto);
-            calendar.set(Calendar.SECOND, 0);
+            calendar.set(year, month, day, hora, minuto, 0);
 
+            // Ignorar si ya pasó
+            if (calendar.getTimeInMillis() <= System.currentTimeMillis()) return;
+
+            // Cancelar alarma existente
+            cancelarAlarma(medicamento);
+
+            // Crear intent para AlarmReceiver
             Intent intent = new Intent(this, AlarmReceiver.class);
             intent.putExtra("nombreMedicamento", medicamento.getNombre());
             intent.putExtra("hora", medicamento.getHora());
 
+            // Crear requestCode único usando los datos del medicamento
+            int requestCode = (medicamento.getId() + medicamento.getNombre() + medicamento.getHora() + medicamento.getFecha()).hashCode();
+
             PendingIntent pendingIntent = PendingIntent.getBroadcast(
                     this,
-                    medicamento.getId().hashCode(),
+                    requestCode,
                     intent,
                     PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
             );
 
+            // Programar la alarma
             AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,
-                    calendar.getTimeInMillis(), pendingIntent);
+            am.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    calendar.getTimeInMillis(),
+                    pendingIntent
+            );
+
         } catch (Exception e) {
             e.printStackTrace();
+            Toast.makeText(this, "Error al programar alarma para " + medicamento.getNombre(), Toast.LENGTH_SHORT).show();
         }
     }
 
     private void mostrarDialogoMedicamento(Medicamento medicamento) {
+        // Muestra diálogo con opciones para editar o eliminar medicamento
         new MaterialAlertDialogBuilder(this)
                 .setTitle(medicamento.getNombre())
                 .setMessage("Hora: " + medicamento.getHora())
@@ -229,6 +270,7 @@ public class InterfazPrincipalActivity extends AppCompatActivity {
     }
 
     private void confirmarEliminacion(Medicamento medicamento) {
+        // Muestra confirmación antes de eliminar
         new MaterialAlertDialogBuilder(this)
                 .setTitle("Confirmar")
                 .setMessage("¿Eliminar " + medicamento.getNombre() + "?")
@@ -238,6 +280,7 @@ public class InterfazPrincipalActivity extends AppCompatActivity {
     }
 
     private void eliminarMedicamento(Medicamento medicamento) {
+        // Elimina el medicamento de Firestore y cancela la alarma
         String uid = mAuth.getUid();
         if (uid == null || medicamento.getId() == null) return;
 
@@ -257,18 +300,26 @@ public class InterfazPrincipalActivity extends AppCompatActivity {
     }
 
     private void cancelarAlarma(Medicamento medicamento) {
-        Intent intent = new Intent(this, AlarmReceiver.class);
-        PendingIntent pi = PendingIntent.getBroadcast(
-                this,
-                medicamento.getId().hashCode(),
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-        );
-        AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-        am.cancel(pi);
+        // Cancela una alarma programada
+        try {
+            int requestCode = (medicamento.getId() + medicamento.getNombre() + medicamento.getHora() + medicamento.getFecha()).hashCode();
+            Intent intent = new Intent(this, AlarmReceiver.class);
+            PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                    this,
+                    requestCode,
+                    intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+            AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+            am.cancel(pendingIntent);
+            pendingIntent.cancel();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void mostrarDialogoCerrarSesion() {
+        // Muestra diálogo para confirmar cierre de sesión
         new MaterialAlertDialogBuilder(this)
                 .setTitle("Cerrar sesión")
                 .setMessage("¿Estás seguro de que quieres salir?")
@@ -282,16 +333,34 @@ public class InterfazPrincipalActivity extends AppCompatActivity {
     }
 
     private void abrirPerfilUsuario() {
+        // Aquí se podría abrir la pantalla de perfil (comentado)
         // startActivity(new Intent(this, PerfilActivity.class));
     }
 
     private void abrirConfiguracionNotificaciones() {
+        // Aquí se podría abrir la pantalla de configuración (comentado)
         // startActivity(new Intent(this, ConfiguracionActivity.class));
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
+        // Infla el menú de la toolbar
         getMenuInflater().inflate(R.menu.menu_toolbar, menu);
         return true;
     }
+
+    private void pedirPermisoNotificaciones() {
+        // Solicita permisos de notificaciones si es Android 13+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(
+                        new String[]{android.Manifest.permission.POST_NOTIFICATIONS},
+                        REQUEST_NOTIFICATION_PERMISSION
+                );
+            }
+        }
+    }
+
 }
+
